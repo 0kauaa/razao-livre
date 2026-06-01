@@ -21,10 +21,13 @@ este front-end simula um fluxo contábil com livro razão, razonete, balancete e
 ## backend local
 
 - conexão com mongodb local em `mongodb://localhost:27017` pelo endpoint `/api`.
-- persistência de lançamentos em coleção e arquivo JSON (`data/lancamentos.json`).
+- persistência completa dos lançamentos criados pelo front-end diretamente em MongoDB.
+- front-end carrega lançamentos salvos no banco ao abrir a aplicação, não depende apenas de estado local.
+- dados também são gravados localmente em `data/lancamentos.json` como fallback.
 - banco mongodb padrão utilizado: `razao-livre` (coleção `lancamentos`).
-- relatório final gerado por pipeline mongodb e gravado em `data/relatorio.json`.
-- front-end mantém geração de script `mongosh` e adiciona leitura do relatório JSON.
+- relatório final gerado por pipeline mongodb e gravado em `data/relatorio.json` e `data/relatorio.txt`.
+- adicionado download direto de relatório JSON e relatório TXT pela interface.
+- front-end mantém geração de script `mongosh` e leitura do relatório JSON.
 
 ## execução
 
