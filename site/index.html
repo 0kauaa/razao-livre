@@ -140,7 +140,13 @@
   <div class="scr" id="scr3">
     <div class="ph">
       <div><div class="pt">Balanço Patrimonial</div><div class="ps">Posição financeira da entidade</div></div>
-      <div style="display:flex;gap:8px"><button class="btn bo bsm" onclick="goTo(2)">← Voltar</button><button class="btn bgo" onclick="openScript()">Script MongoDB ↗</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn bo bsm" onclick="goTo(2)">← Voltar</button>
+        <button class="btn bo bsm" onclick="downloadReportJson()">Baixar JSON</button>
+        <button class="btn bo bsm" onclick="downloadReportTxt()">Baixar TXT</button>
+        <button class="btn bo bsm" onclick="openReport()">Relatório JSON</button>
+        <button class="btn bgo" onclick="openScript()">Script MongoDB ↗</button>
+      </div>
     </div>
     <div id="bpDiv"></div>
   </div>

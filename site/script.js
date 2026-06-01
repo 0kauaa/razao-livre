@@ -1,4 +1,5 @@
 var LL=[];
+var BACKEND_URL = '/api';
 
 /* ── navegação ─────────────────────────────────────── */
 function goTo(n){
@@ -8,6 +9,88 @@ function goTo(n){
   if(n===1)renderRaz();
   if(n===2)renderBal();
   if(n===3)renderBP();
+}
+
+function syncServer(){
+  if(!window.fetch) return;
+  fetch(BACKEND_URL+'/lancamentos',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(LL)})
+    .then(function(res){
+      if(!res.ok){return res.json().then(function(data){throw new Error(data.error||'erro de servidor');});}
+      return res.json();
+    })
+    .catch(function(err){
+      console.error('erro ao persistir no servidor',err);
+      toast('falha ao persistir no mongodb local','e');
+    });
+}
+
+function normalizeEntryIds(entries){
+  return entries.map(function(entry){
+    var id = entry._id;
+    if (id && typeof id !== 'string' && id.toString) {
+      id = id.toString();
+    }
+    return Object.assign({}, entry, { _id: id });
+  });
+}
+
+function loadEntries(){
+  if(!window.fetch) return;
+  fetch(BACKEND_URL+'/lancamentos')
+    .then(function(res){
+      if(!res.ok){return res.json().then(function(data){throw new Error(data.error||'erro de servidor');});}
+      return res.json();
+    })
+    .then(function(data){
+      if(Array.isArray(data)){
+        LL = normalizeEntryIds(data);
+      } else {
+        LL = [];
+      }
+      renderEnt();
+    })
+    .catch(function(err){
+      console.warn('não foi possível carregar lançamentos do servidor',err);
+      toast('Não foi possível carregar lançamentos do MongoDB','w');
+      renderEnt();
+    });
+}
+
+function downloadReportJson(){
+  window.location = BACKEND_URL + '/report/json/download';
+}
+
+function downloadReportTxt(){
+  window.location = BACKEND_URL + '/report/txt/download';
+}
+
+function openReport(){
+  var body=document.getElementById('moBody');
+  body.innerHTML='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;"><button class="btn bo bsm" onclick="downloadReportJson()">Baixar JSON</button><button class="btn bo bsm" onclick="downloadReportTxt()">Baixar TXT</button></div>';
+  body.innerHTML+='<div class="ib igo">carregando relatório json...</div>';
+  document.getElementById('moOv').classList.add('open');
+  fetch(BACKEND_URL+'/report')
+    .then(function(res){if(!res.ok){throw new Error('não foi possível carregar o relatório');}return res.json();})
+    .then(function(data){
+      var html=body.innerHTML;
+      html+='<div class="ib igo">relatório json gerado pelo pipeline mongodb local</div>';
+      html+='<div class="stl">balanço patrimonial formatado</div>';
+      html+='<div class="report-summary">';
+      html+='<div class="br"><span>ativo total</span><span>R$ '+fmt(data.totalAtivo)+'</span></div>';
+      html+='<div class="br"><span>passivo total</span><span>R$ '+fmt(data.totalPassivo)+'</span></div>';
+      html+='<div class="br"><span>patrimônio líquido</span><span>R$ '+fmt(data.totalPL)+'</span></div>';
+      html+='<div class="br"><span>resultado</span><span>R$ '+fmt(data.resultado)+'</span></div>';
+      html+='<div class="br"><span>passivo + pl</span><span>R$ '+fmt(data.totalPassivoPL)+'</span></div>';
+      html+='<div class="br"><span>equilibrado</span><span>'+ (data.equilibrado ? 'sim' : 'não') +'</span></div>';
+      html+='</div>';
+      html+='<div class="stl">json do relatório</div>';
+      html+='<pre class="ms">'+JSON.stringify(data,null,2)+'</pre>';
+      body.innerHTML=html;
+    })
+    .catch(function(err){
+      console.error(err);
+      body.innerHTML='<div class="ib bda">não foi possível ler o relatório json. veja o console para detalhes.</div>';
+    });
 }
 
 /* ── utilitários ─────────────────────────────────────────── */
@@ -59,11 +142,12 @@ function addL(){
   });
   ['fCn','fDb','fCr','fDs'].forEach(function(id){document.getElementById(id).value='';});
   renderEnt();
+  syncServer();
   toast('Lançamento adicionado!');
 }
 
-function removeL(id){LL=LL.filter(function(l){return l._id!==id;});renderEnt();}
-function clearAll(){LL=[];renderEnt();toast('Lançamentos removidos.');}
+function removeL(id){LL=LL.filter(function(l){return l._id!==id;});renderEnt();syncServer();}
+function clearAll(){LL=[];renderEnt();syncServer();toast('Lançamentos removidos.');}
 
 function renderEnt(){
   document.getElementById('cntLbl').textContent='('+LL.length+')';
@@ -340,6 +424,7 @@ function loadExample(){
     mk('21',d+'31','Banco',             'AC', 'D',      0,   7500,'Pagamento despesas')
   ];
   renderEnt();
+  syncServer();
   toast('Exemplo 1 carregado — 21 lançamentos em partidas dobradas!');
 }
 
@@ -368,6 +453,7 @@ function loadExample2(){
     mk('e15',d+'31','Caixa',               'AC', 'D',      0,  10000,'Pagamento despesas — caixa')
   ];
   renderEnt();
+  syncServer();
   toast('Exemplo 2 carregado — balanço equilibrado em R$ 520.000!');
 }
 
@@ -413,4 +499,7 @@ function cpById(id){var el=document.getElementById(id);if(!el)return;navigator.c
 function cpAll(){var ps=document.querySelectorAll('pre.ms');var t=Array.from(ps).map(function(p){return p.innerText;}).join('\n\n// ──────────────────\n\n');navigator.clipboard.writeText(t).then(function(){toast('Script completo copiado!');});}
 function closeMo(){document.getElementById('moOv').classList.remove('open');}
 
-document.getElementById('fDt').valueAsDate=new Date();
+document.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('fDt').valueAsDate = new Date();
+  loadEntries();
+});
